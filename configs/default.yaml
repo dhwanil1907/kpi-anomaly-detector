@@ -1,0 +1,75 @@
+# ========================================
+# KPI Anomaly Detector Configuration
+# ========================================
+
+# --- Data Paths ---
+data:
+  # Folder where your raw Kaggle or local CSVs live
+  input_dir: "/Users/dhwanil/Desktop/ONGOING PROJECTS/data for kpi"
+
+  # Where to save processed / cleaned dataset
+  processed: "../data/processed/clean_data.csv"
+
+  # Optional: where to store model files
+  model_dir: "../models/"
+
+# --- Preprocessing ---
+preprocess:
+  # "global" → aggregate all stores by date
+  # "store"  → keep each store separate
+  grain: "global"
+
+  # frequency of resampling (if needed)
+  freq: "D"     # daily
+  rolling_windows: [7, 28]
+
+# --- Features ---
+features:
+  target: "sales"           # main KPI
+  include:
+    - onpromotion
+    - transactions
+    - oil_price
+  lags: [7, 28]
+  rolling: [7, 28]
+  pct_change: [1, 7]
+
+# --- Statistical Detectors ---
+models:
+  statistical:
+    zscore_threshold: 3.0   # how many std devs away counts as anomaly
+    iqr_k: 1.5              # IQR multiplier
+
+  # --- ML Detector (Isolation Forest / OneClassSVM etc.) ---
+  ml:
+    method: "isolation_forest"
+    contamination: 0.02     # expected % of anomalies
+    n_estimators: 300
+    random_state: 42
+
+  # --- Forecast-based (Prophet or ARIMA) ---
+  forecast:
+    method: "prophet"
+    sigma_k: 3.0            # anomalies if |residual| > k * std
+    yearly_seasonality: true
+    weekly_seasonality: true
+    seasonality_mode: "additive"
+
+# --- Evaluation ---
+evaluate:
+  metrics: ["precision", "recall", "f1"]
+  save_report: true
+  output_path: "../data/processed/evaluation_report.json"
+
+# --- Visualization ---
+visualize:
+  default_kpi: "sales"
+  flag_priority: "anom_iforest"
+  color_theme: "plotly"
+  save_plots: "../plots/"
+
+# --- Runtime / Environment ---
+runtime:
+  random_seed: 42
+  log_level: "INFO"
+  use_synthetic_if_missing: true
