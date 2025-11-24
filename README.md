@@ -40,7 +40,7 @@ Includes a fully interactive Streamlit dashboard and a reusable `src/kpi_anomaly
 ---
 
 ## Project Structure
-
+'''
 kpi-anomaly-detector/
 │
  ├── app.py                      # Streamlit dashboard
@@ -68,7 +68,7 @@ kpi-anomaly-detector/
  ├── .gitattributes              # prevents notebooks from affecting language stats
  ├── .gitignore
  └── README.md
-
+'''
 ---
 
 ## Installation
