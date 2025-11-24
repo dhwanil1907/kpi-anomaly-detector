@@ -40,12 +40,12 @@ Includes a fully interactive Streamlit dashboard and a reusable `src/kpi_anomaly
 ---
 
 ## Project Structure
-'''
+```
 kpi-anomaly-detector/
 │
- ├── app.py                      # Streamlit dashboard
+├── app.py                      # Streamlit dashboard
 │
- ├── src/
+├── src/
 │   └── kpi_anomaly/
 │       ├── init.py
 │       ├── io.py
@@ -54,25 +54,26 @@ kpi-anomaly-detector/
 │       ├── viz.py
 │       └── config.py
 │
- ├── notebooks/
+├── notebooks/
 │   └── 01_eda.ipynb
 │
- ├── data/
+├── data/
 │   ├── raw/                    # local datasets (ignored by Git)
 │   └── processed/              # clean_data.csv, anomalies.csv
 │
- ├── configs/
+├── configs/
 │   └── default.yaml
 │
- ├── requirements.txt
- ├── .gitattributes              # prevents notebooks from affecting language stats
- ├── .gitignore
- └── README.md
-'''
+├── requirements.txt
+├── .gitattributes              # prevents notebooks from affecting language stats
+├── .gitignore
+└── README.md
+```
 ---
 
 ## Installation
 
+```
 git clone 
 cd kpi-anomaly-detector
 
@@ -82,12 +83,14 @@ venv\Scripts\activate           # Windows
 
 pip install -r requirements.txt
 pip install -e .
-
+```
 ---
 
 ## Running the Streamlit App
 
+```
 streamlit run app.py
+```
 
 Open the URL displayed in the console, usually:
 
