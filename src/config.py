@@ -1,4 +1,3 @@
-
 # config.py — YAML/JSON configuration loader
 
 from pathlib import Path
