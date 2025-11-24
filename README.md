@@ -43,9 +43,9 @@ Includes a fully interactive Streamlit dashboard and a reusable `src/kpi_anomaly
 
 kpi-anomaly-detector/
 │
-├── app.py                     # Streamlit dashboard
+ ├── app.py                      # Streamlit dashboard
 │
-├── src/
+ ├── src/
 │   └── kpi_anomaly/
 │       ├── init.py
 │       ├── io.py
@@ -54,20 +54,20 @@ kpi-anomaly-detector/
 │       ├── viz.py
 │       └── config.py
 │
-├── notebooks/
+ ├── notebooks/
 │   └── 01_eda.ipynb
 │
-├── data/
-│   ├── raw/                   # local datasets (ignored by Git)
-│   └── processed/             # clean_data.csv, anomalies.csv
+ ├── data/
+│   ├── raw/                    # local datasets (ignored by Git)
+│   └── processed/              # clean_data.csv, anomalies.csv
 │
-├── configs/
+ ├── configs/
 │   └── default.yaml
 │
-├── requirements.txt
-├── .gitattributes             # prevents notebooks from affecting language stats
-├── .gitignore
-└── README.md
+ ├── requirements.txt
+ ├── .gitattributes              # prevents notebooks from affecting language stats
+ ├── .gitignore
+ └── README.md
 
 ---
 
@@ -141,33 +141,8 @@ You choose how many detectors must agree:
 
 ---
 
-## Why This Project Matters
-
-- Demonstrates real-world unsupervised machine learning  
-- Streamlit UI provides business-friendly insights  
-- Reusable Python package for anomaly detection  
-- Clean architecture for production-style work  
-- Strong portfolio project showcasing:
-  - Python package design  
-  - Data engineering  
-  - ML modeling  
-  - Visualization  
-  - Software structure  
-
----
-
 ## Author
 
-**Dhwanil**  
-Machine Learning · Data Engineering · Python Development  
-(Add your GitHub & LinkedIn links here)
+**Dhwanil Ranpura**  
+Machine Learning · Data Scientist · Python Development  
 
-
-⸻
-
-If you want, I can also:
-	•	Create a cover image/banner for your GitHub repo
-	•	Generate a shorter README
-	•	Add badges (Python, Streamlit, license, etc.)
-
-Just tell me!
