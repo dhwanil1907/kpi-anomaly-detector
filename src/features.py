@@ -1,6 +1,16 @@
 # features.py — Feature engineering utilities
 
 import pandas as pd
+import numpy as np
+
+def add_log_return(df: pd.DataFrame, price_col: str = "Close") -> pd.DataFrame:
+    """Add log return and log volume features for stationarity."""
+    out = df.copy()
+    if price_col in out.columns:
+        out["log_return"] = np.log(out[price_col] / out[price_col].shift(1))
+    if "Volume" in out.columns:
+        out["log_volume"] = np.log(out["Volume"] + 1)
+    return out
 
 def add_time_features(df: pd.DataFrame, date_col: str = "date") -> pd.DataFrame:
     """Add calendar features (day of week, month, weekend flag)."""
@@ -26,6 +36,7 @@ def add_lag_roll(df: pd.DataFrame, target: str) -> pd.DataFrame:
 
 def build_features(df: pd.DataFrame, date_col: str, target: str) -> pd.DataFrame:
     """Full feature-building pipeline."""
-    tmp = add_time_features(df, date_col)
+    tmp = add_log_return(df) if "Close" in df.columns else df.copy()
+    tmp = add_time_features(tmp, date_col)
     tmp = add_lag_roll(tmp, target)
     return tmp.dropna().reset_index(drop=True)

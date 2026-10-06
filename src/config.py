@@ -23,8 +23,13 @@ def load_config(path: str | Path | None = None) -> Dict[str, Any]:
     """Load YAML or JSON config. Return defaults if missing."""
     default = {
         "data": {
-            "input_dir": "data/raw",
+            "ticker": "AAPL",
+            "start": "2019-01-01",
+            "end": None,          # None = today at runtime
             "processed": "data/processed/clean_data.csv",
+        },
+        "preprocess": {
+            "target": "Close",
         },
         "models": {
             "ml": {"contamination": 0.02, "n_estimators": 300, "random_state": 42}

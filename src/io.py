@@ -3,6 +3,29 @@
 from pathlib import Path
 import pandas as pd
 
+
+def load_yfinance(ticker: str = "AAPL",
+                  start: str = "2019-01-01",
+                  end: str = "2024-12-31") -> pd.DataFrame:
+    """
+    Download OHLCV stock data from Yahoo Finance via yfinance.
+    Returns a DataFrame with columns: date, Open, High, Low, Close, Volume.
+    """
+    import yfinance as yf
+
+    raw = yf.download(ticker, start=start, end=end, auto_adjust=True, progress=False)
+
+    # Flatten MultiIndex columns produced by yfinance >= 0.2.x
+    if isinstance(raw.columns, pd.MultiIndex):
+        raw.columns = raw.columns.get_level_values(0)
+
+    raw = raw.reset_index()
+    raw.rename(columns={"Date": "date"}, inplace=True)
+    raw["date"] = pd.to_datetime(raw["date"])
+
+    keep = [c for c in ["date", "Open", "High", "Low", "Close", "Volume"] if c in raw.columns]
+    return raw[keep].sort_values("date").reset_index(drop=True)
+
 def find_data_dir(start: Path | None = None) -> Path | None:
     """Search upward from current directory for a folder named 'data'."""
     start = start or Path.cwd()
