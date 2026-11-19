@@ -1,8 +1,6 @@
 # KPI Anomaly Detector
 
-An end-to-end **unsupervised anomaly detection system** for financial time-series data, built on real AAPL stock data (2019–present). Combines 5 ML/statistical detectors with SHAP explainability, stationarity-aware feature engineering, and validation against 15 documented real-world market events.
-
-Includes an interactive Streamlit dashboard and a reusable `src/` Python package.
+Unsupervised anomaly detection on AAPL daily data (2019 to present). Five detectors (Isolation Forest, One-Class SVM, LOF, z-score, IQR) vote on which days look unusual. SHAP explains the Isolation Forest flags, and the top-ranked days are checked against a hand-written list of 15 market events. There is a Streamlit dashboard and a small `src/` package.
 
 ---
 
@@ -10,25 +8,17 @@ Includes an interactive Streamlit dashboard and a reusable `src/` Python package
 
 | Metric | Value |
 |---|---|
-| Dataset | AAPL · 1,950 trading days · Jan 2019 – Oct 2026 |
-| ADF p-value (raw Close) | 0.9476 → ❌ Non-stationary |
-| ADF p-value (log returns) | 0.0000 → ✅ Stationary |
-| Consensus anomalies detected | 20 / 1,922 days (1.04%) |
-| Precision@5 | 60% (3/5 flagged days matched known events) |
-| Precision@10 | 50% (5/10 flagged days matched known events) |
-| Recall@10 | 33.3% (5 of 15 known events caught in top 10) |
-| SHAP top feature | `Close_pct_change_1` (importance = 0.236) |
-| Model stability agreement | 67% between first/second half splits |
+| Dataset | AAPL, 1,950 trading days, Jan 2019 to Oct 2026 |
+| ADF p-value, raw Close | 0.9476 (non-stationary) |
+| ADF p-value, log returns | 0.0000 (stationary) |
+| Consensus anomalies | 20 of 1,922 days (1.04%) |
+| Precision@5 | 60% (3 of 5) |
+| Precision@10 | 50% (5 of 10) |
+| Recall@10 | 33.3% (5 of 15 events) |
+| Top SHAP feature | `Close_pct_change_1` (mean abs SHAP 0.236) |
+| Stability | 67% agreement between first-half and second-half fits |
 
-Known events caught in top 10: COVID crash (Feb 28, Mar 2, Mar 13 2020), US-China trade war spike (May 13 2019), COVID recovery bounce (Jul 31 2020).
-
-## Highlights
-
-- **Precision@5 of 60%** — 3 of the top 5 most anomalous days matched documented real-world market events, with zero labeled training data
-- **SHAP explainability** — every anomaly comes with per-feature attribution: *why* was this day flagged?
-- **Statistically validated** — ADF test confirmed raw Close is non-stationary (p=0.9476); log returns are stationary (p=0.0000)
-- **5-detector ensemble** with consensus voting — 20 high-confidence anomalies out of 1,922 trading days
-- **Live data** — pulls from Yahoo Finance via `yfinance`, always up to date
+Matches are counted within +/- 1 day of an event date. See [Limitations](#limitations) before reading much into these.
 
 ---
 
@@ -68,8 +58,8 @@ Known events caught in top 10: COVID crash (Feb 28, Mar 2, Mar 13 2020), US-Chin
 ### Streamlit Dashboard
 - Live data from Yahoo Finance — no CSV needed
 - Select any numeric KPI column to analyse
-- Severity labels: 🔴 High / 🟡 Medium / 🔵 Low
-- Plain-English summary card (*"31 anomalous days found — most anomalous: March 16, 2020"*)
+- Severity labels (High / Medium / Low) based on how many detectors agree
+- Summary card with the anomaly count and the most anomalous day
 - Annotated time-series chart with hover tooltips
 - Detector agreement bar chart
 - Download anomalies as CSV
@@ -156,42 +146,38 @@ Run cells top to bottom. The notebook covers:
 ## How It Works
 
 ### 1. Data Ingestion
-Pulls OHLCV data directly from Yahoo Finance via `yfinance`. No manual CSV download needed.
+Pulls OHLCV data from Yahoo Finance via `yfinance`.
 
 ### 2. Stationarity Check
 ADF test confirms raw `Close` price is non-stationary (p > 0.05). Log returns are computed and confirmed stationary (p < 0.05) before being fed to ML models.
 
 ### 3. Feature Engineering
-Each day gets a rich feature vector: log return, log volume, lagged prices, rolling mean/std, momentum, and calendar context — giving models the temporal pattern needed to define "normal".
+Each day gets a feature vector: log return, log volume, lagged prices, rolling mean/std, momentum, and calendar fields.
 
 ### 4. Detection
 Five independent methods each produce a binary anomaly flag. A day is only marked anomalous if **≥ k detectors agree** (configurable: 1 = sensitive, 2 = balanced, 3 = strict).
 
 ### 5. Validation
-Top-K flagged days are compared against a curated list of 15 known market events. Precision@K and Recall@K quantify performance without requiring labeled training data.
+Top-K flagged days are compared against the 15 dates in `KNOWN_EVENTS` (`src/evaluate.py`). There are no labels, so this is the only check on whether the flags mean anything.
 
 ### 6. Explainability
-SHAP values attribute each anomaly flag to specific features — e.g., *"the March 2020 flag was driven by a −12% log return (SHAP +0.08) and 3× normal volume (SHAP +0.06)"*.
+SHAP values from the Isolation Forest attribute each flag to features. `explain_top_anomalies` prints the top three drivers for the most anomalous days.
 
 ---
 
 ## Configuration
 
-Edit `configs/default.yaml` to change ticker, date range, or model settings:
+`configs/default.yaml` holds the ticker, start date and Isolation Forest settings, and `src.config.load_config()` reads it. The Streamlit app does not load it yet, so the dashboard uses its own sidebar controls.
 
-```yaml
-data:
-  ticker: "AAPL"
-  start: "2019-01-01"
+---
 
-preprocess:
-  target: "Close"
+## Limitations
 
-models:
-  ml:
-    contamination: 0.02
-    n_estimators: 300
-```
+- **Hand-picked ground truth.** `KNOWN_EVENTS` has 15 dates, and 6 of them are in March 2020. A model that only catches the COVID crash scores well on precision.
+- **Small sample.** Recall@10 of 33% is 5 events out of 15, so one more or fewer hit moves it a lot.
+- **Close-to-event matching.** A flag counts if it falls within a day of an event, which makes matches easier than an exact-date test.
+- **SHAP covers one model.** The explanations are for the Isolation Forest only, not for the consensus vote.
+- **Fixed contamination.** The ML detectors assume about 2% of days are anomalous, so the count of flags is partly set by that choice.
 
 ---
 

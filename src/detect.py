@@ -28,8 +28,8 @@ def _clean_X(X: pd.DataFrame | np.ndarray) -> np.ndarray:
     if isinstance(X, pd.DataFrame):
         X = (
             X.replace([np.inf, -np.inf], np.nan)
-            .fillna(method="ffill")
-            .fillna(method="bfill")
+            .ffill()
+            .bfill()
             .fillna(0)
             .to_numpy()
         )
