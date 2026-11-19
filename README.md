@@ -8,17 +8,17 @@ Unsupervised anomaly detection on AAPL daily data (2019 to present). Five detect
 
 | Metric | Value |
 |---|---|
-| Dataset | AAPL, 1,950 trading days, Jan 2019 to Oct 2026 |
-| ADF p-value, raw Close | 0.9476 (non-stationary) |
+| Dataset | AAPL, 1,983 trading days, Jan 2019 to 19 Nov 2026 (1,955 after feature building) |
+| ADF p-value, raw Close | 0.9544 (non-stationary) |
 | ADF p-value, log returns | 0.0000 (stationary) |
-| Consensus anomalies | 20 of 1,922 days (1.04%) |
+| Consensus anomalies (2+ detectors agree) | 28 of 1,955 days (1.43%) |
 | Precision@5 | 60% (3 of 5) |
 | Precision@10 | 50% (5 of 10) |
 | Recall@10 | 33.3% (5 of 15 events) |
-| Top SHAP feature | `Close_pct_change_1` (mean abs SHAP 0.236) |
-| Stability | 67% agreement between first-half and second-half fits |
+| Top SHAP features | `dow` (0.203), `month` (0.199), `log_return` (0.188) |
+| Stability | 71% day-level agreement between first-half and second-half fits, but only 5.6% overlap among the days either model flagged |
 
-Matches are counted within +/- 1 day of an event date. See [Limitations](#limitations) before reading much into these.
+Matches are counted within +/- 1 day of an event date. The data is pulled live from Yahoo Finance, so these numbers come from one run (19 Nov 2026) and will drift as new days arrive. See [Limitations](#limitations) before reading much into them.
 
 ---
 
@@ -177,6 +177,10 @@ SHAP values from the Isolation Forest attribute each flag to features. `explain_
 - **Small sample.** Recall@10 of 33% is 5 events out of 15, so one more or fewer hit moves it a lot.
 - **Close-to-event matching.** A flag counts if it falls within a day of an event, which makes matches easier than an exact-date test.
 - **SHAP covers one model.** The explanations are for the Isolation Forest only, not for the consensus vote.
+- **Weak statistical baselines.** Z-score and IQR run on raw `Close`, which trends, so in the latest run they flagged 0 days. The vote is effectively three detectors, not five.
+- **Unstable across periods.** Fitting on different halves of the history gives mostly different flagged days (see Stability above).
+- **Calendar features lead the SHAP ranking.** `dow` and `month` rank above the price features, which suggests they add noise rather than signal for the Isolation Forest.
+- **Edge of the data.** The latest day (19 Nov 2026) is in the top-10 flagged days. Days at the end of the series are scored with the least context, so treat that flag with caution.
 - **Fixed contamination.** The ML detectors assume about 2% of days are anomalous, so the count of flags is partly set by that choice.
 
 ---
