@@ -40,3 +40,8 @@ def build_features(df: pd.DataFrame, date_col: str, target: str) -> pd.DataFrame
     tmp = add_time_features(tmp, date_col)
     tmp = add_lag_roll(tmp, target)
     return tmp.dropna().reset_index(drop=True)
+
+def feature_columns(df: pd.DataFrame, target: str) -> list[str]:
+    """Stationary model inputs (returns and changes, not price levels), in a fixed order."""
+    cols = ["log_return", "log_volume", f"{target}_pct_change_1", f"{target}_pct_change_7", "dow", "month"]
+    return [c for c in cols if c in df.columns]

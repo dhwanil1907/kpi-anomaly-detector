@@ -8,17 +8,17 @@ Unsupervised anomaly detection on AAPL daily data (2019 to present). Five detect
 
 | Metric | Value |
 |---|---|
-| Dataset | AAPL, 1,983 trading days, Jan 2019 to 19 Nov 2026 (1,955 after feature building) |
-| ADF p-value, raw Close | 0.9544 (non-stationary) |
-| ADF p-value, log returns | 0.0000 (stationary) |
-| Consensus anomalies (2+ detectors agree) | 28 of 1,955 days (1.43%) |
+| Dataset | AAPL, 1,984 trading days, Jan 2019 to 20 Nov 2026 (1,956 after feature building) |
+| ADF p-value, raw Close | 0.9454 (non-stationary) |
+| ADF p-value, log returns | ~0 (stationary) |
+| Consensus anomalies (2+ detectors agree) | 50 of 1,956 days (2.56%) |
 | Precision@5 | 60% (3 of 5) |
 | Precision@10 | 50% (5 of 10) |
 | Recall@10 | 33.3% (5 of 15 events) |
-| Top SHAP features | `dow` (0.203), `month` (0.199), `log_return` (0.188) |
-| Stability | 71% day-level agreement between first-half and second-half fits, but only 5.6% overlap among the days either model flagged |
+| Top SHAP features | `dow` (0.399), `log_return` (0.368), `month` (0.336) |
+| Stability | 96% day-level agreement between first-half and second-half fits, but only 21% overlap among the days either model flagged |
 
-Matches are counted within +/- 1 day of an event date. The data is pulled live from Yahoo Finance, so these numbers come from one run (19 Nov 2026) and will drift as new days arrive. See [Limitations](#limitations) before reading much into them.
+Ties in vote count are broken by Isolation Forest score. Matches are counted within +/- 1 day of an event date. The data is pulled live from Yahoo Finance, so these numbers come from one run (20 Nov 2026) and will drift as new days arrive. See [Limitations](#limitations) before reading much into them.
 
 ---
 
@@ -39,10 +39,10 @@ Matches are counted within +/- 1 day of an event date. The data is pulled live f
 ### Feature Engineering Pipeline
 - **Log returns** (`ln(Pₜ/Pₜ₋₁)`) — stationary transformation of raw price
 - **Log volume** — reduces skew from extreme trading volume spikes
-- **Lag features** — 7-day and 28-day price memory
-- **Rolling statistics** — 7-day mean and std (local trend + volatility)
 - **Momentum** — 1-day and 7-day percent change
-- **Calendar features** — day-of-week, month, weekend flag
+- **Calendar features** — day-of-week, month
+
+The ML detectors see only these six stationary features (`feature_columns` in `src/features.py`). Lags and rolling stats are still built by `build_features` but are price-level, so they are not fed to the models.
 
 ### Model Validation
 - **ADF (Augmented Dickey-Fuller) test** — confirms raw price is non-stationary; log returns pass stationarity check
@@ -56,7 +56,7 @@ Matches are counted within +/- 1 day of an event date. The data is pulled live f
 - SHAP scatter plot: feature value vs SHAP contribution across all days
 
 ### Streamlit Dashboard
-- Live data from Yahoo Finance — no CSV needed
+- Reads `data/processed/clean_data.csv` (run the notebook first) or an uploaded CSV; it does not fetch from Yahoo Finance itself
 - Select any numeric KPI column to analyse
 - Severity labels (High / Medium / Low) based on how many detectors agree
 - Summary card with the anomaly count and the most anomalous day
@@ -115,6 +115,8 @@ pip install -r requirements.txt
 
 ## Running the Dashboard
 
+Run the notebook first so `data/processed/clean_data.csv` exists (`data/` is git-ignored), or switch to **Upload CSV** in the sidebar. Run from the repo root:
+
 ```bash
 streamlit run app.py
 ```
@@ -139,7 +141,7 @@ Run cells top to bottom. The notebook covers:
 6. Detector comparison + consensus voting
 7. Model validation: Precision@K and Recall@K vs known events
 8. SHAP explainability: feature importance + per-day explanations
-9. Save processed outputs
+9. Save processed outputs (`clean_data.csv`, and `anomalies.csv` with days flagged by any detector)
 
 ---
 
@@ -152,10 +154,10 @@ Pulls OHLCV data from Yahoo Finance via `yfinance`.
 ADF test confirms raw `Close` price is non-stationary (p > 0.05). Log returns are computed and confirmed stationary (p < 0.05) before being fed to ML models.
 
 ### 3. Feature Engineering
-Each day gets a feature vector: log return, log volume, lagged prices, rolling mean/std, momentum, and calendar fields.
+Each day gets a feature vector of log return, log volume, 1- and 7-day momentum, and day-of-week and month. Price levels are left out because the ADF test shows they are non-stationary.
 
 ### 4. Detection
-Five independent methods each produce a binary anomaly flag. A day is only marked anomalous if **≥ k detectors agree** (configurable: 1 = sensitive, 2 = balanced, 3 = strict).
+Five independent methods each produce a binary anomaly flag. Z-score and IQR run on the 1-day % change, not the price level. A day is only marked anomalous if **≥ k detectors agree** (configurable: 1 = sensitive, 2 = balanced, 3 = strict).
 
 ### 5. Validation
 Top-K flagged days are compared against the 15 dates in `KNOWN_EVENTS` (`src/evaluate.py`). There are no labels, so this is the only check on whether the flags mean anything.
@@ -177,10 +179,9 @@ SHAP values from the Isolation Forest attribute each flag to features. `explain_
 - **Small sample.** Recall@10 of 33% is 5 events out of 15, so one more or fewer hit moves it a lot.
 - **Close-to-event matching.** A flag counts if it falls within a day of an event, which makes matches easier than an exact-date test.
 - **SHAP covers one model.** The explanations are for the Isolation Forest only, not for the consensus vote.
-- **Weak statistical baselines.** Z-score and IQR run on raw `Close`, which trends, so in the latest run they flagged 0 days. The vote is effectively three detectors, not five.
+- **Statistical baselines are crude.** Z-score and IQR look at one series (daily % change), so they flag only large single-day moves. IQR flags 97 days and z-score 29, against about 40 for each ML model.
 - **Unstable across periods.** Fitting on different halves of the history gives mostly different flagged days (see Stability above).
-- **Calendar features lead the SHAP ranking.** `dow` and `month` rank above the price features, which suggests they add noise rather than signal for the Isolation Forest.
-- **Edge of the data.** The latest day (19 Nov 2026) is in the top-10 flagged days. Days at the end of the series are scored with the least context, so treat that flag with caution.
+- **Calendar features lead the SHAP ranking.** `dow` and `month` rank first and third, which suggests they add noise rather than signal for the Isolation Forest.
 - **Fixed contamination.** The ML detectors assume about 2% of days are anomalous, so the count of flags is partly set by that choice.
 
 ---

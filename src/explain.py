@@ -32,7 +32,9 @@ def explain_top_anomalies(shap_values, df_det, feature_cols, date_col="date", ta
     """
     Print a human-readable SHAP explanation for the top-N most anomalous rows.
     """
-    top_idx = df_det["vote_sum"].nlargest(n).index.tolist()
+    # Ties on vote_sum are broken by Isolation Forest score (lower = more anomalous)
+    by = ["vote_sum"] + (["iforest_score"] if "iforest_score" in df_det.columns else [])
+    top_idx = df_det.sort_values(by, ascending=[False] + [True] * (len(by) - 1)).head(n).index.tolist()
     print("=" * 60)
     print(f"  SHAP Explanation — Top {n} Most Anomalous Days")
     print("=" * 60)

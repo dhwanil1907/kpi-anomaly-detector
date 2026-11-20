@@ -7,7 +7,7 @@ import sys
 
 sys.path.append(str(Path(__file__).resolve().parents[0] / "src"))
 from src import (
-    build_features, run_iforest, run_ocsvm, run_lof,
+    build_features, feature_columns, run_iforest, run_ocsvm, run_lof,
     zscore_flags, iqr_flags,
     plot_series_with_anoms, counts_bar
 )
@@ -205,6 +205,10 @@ if mode == "Use processed files":
         st.stop()
     fp       = processed_dir / "clean_data.csv"
     df_input = pd.read_csv(fp)
+    # Keep only the raw columns; features are rebuilt below, and the engineered
+    # columns saved by the notebook would otherwise show up as selectable KPIs.
+    raw_cols = [c for c in ["date", "Open", "High", "Low", "Close", "Volume"] if c in df_input.columns]
+    df_input = df_input[raw_cols]
     source_label = fp.name
 else:
     up = st.file_uploader(
@@ -266,16 +270,7 @@ st.markdown("<hr>", unsafe_allow_html=True)
 # ---------------------------------------------------------
 df_feat = build_features(df_input[[date_col] + numeric_cols], date_col=date_col, target=kpi)
 
-feature_cols = [
-    kpi, f"{kpi}_lag_7", f"{kpi}_lag_28",
-    f"{kpi}_rollmean_7", f"{kpi}_rollstd_7",
-    f"{kpi}_pct_change_1", f"{kpi}_pct_change_7",
-    "dow", "month", "is_weekend",
-]
-for c in ["Volume", "Open", "High", "Low"]:
-    if c in df_feat.columns:
-        feature_cols.append(c)
-feature_cols = [c for c in feature_cols if c in df_feat.columns]
+feature_cols = feature_columns(df_feat, kpi)
 
 if not feature_cols:
     st.error("No feature columns available. Check your input data.")
@@ -284,8 +279,10 @@ if not feature_cols:
 # ---------------------------------------------------------
 # Detection
 # ---------------------------------------------------------
-z, zmask    = zscore_flags(df_feat[kpi], 3.0)
-iqr_mask, _ = iqr_flags(df_feat[kpi], 1.5)
+# Statistical baselines run on 1-day % change: raw levels trend, so they would never flag anything
+stat_series = df_feat[f"{kpi}_pct_change_1"]
+z, zmask    = zscore_flags(stat_series, 3.0)
+iqr_mask, _ = iqr_flags(stat_series, 1.5)
 
 df_det = df_feat[[date_col, kpi]].copy()
 df_det["zscore"]      = z
@@ -328,8 +325,10 @@ n_anomaly = int(df_det["anom_consensus"].sum())
 pct       = n_anomaly / max(1, n_total) * 100
 days_span = (date_max - date_min).days
 
-worst_day  = df_det.loc[df_det["vote_sum"].idxmax(), date_col] if n_anomaly > 0 else None
-worst_val  = df_det.loc[df_det["vote_sum"].idxmax(), kpi]      if n_anomaly > 0 else None
+# Ties on vote_sum are broken by Isolation Forest score (lower = more anomalous)
+worst_idx  = df_det.sort_values(["vote_sum", "iforest_score"], ascending=[False, True]).index[0]
+worst_day  = df_det.loc[worst_idx, date_col] if n_anomaly > 0 else None
+worst_val  = df_det.loc[worst_idx, kpi]      if n_anomaly > 0 else None
 
 # ---------------------------------------------------------
 # Plain-English Summary
@@ -474,8 +473,8 @@ with st.expander("🧠 How does anomaly detection work? (click to expand)"):
             <strong style="color:#9ca3af;">🌲 Isolation Forest</strong> — Randomly splits the data; anomalies are isolated faster. &nbsp;|&nbsp;
             <strong style="color:#9ca3af;">📍 Local Outlier Factor</strong> — Compares each day to its neighbours. &nbsp;|&nbsp;
             <strong style="color:#9ca3af;">🔷 One-Class SVM</strong> — Learns the boundary of "normal" and flags anything outside. &nbsp;|&nbsp;
-            <strong style="color:#9ca3af;">📐 Z-Score</strong> — Flags values more than 3 standard deviations from the mean. &nbsp;|&nbsp;
-            <strong style="color:#9ca3af;">📦 IQR</strong> — Flags values outside the typical price range.
+            <strong style="color:#9ca3af;">📐 Z-Score</strong> — Flags daily changes more than 3 standard deviations from the mean change. &nbsp;|&nbsp;
+            <strong style="color:#9ca3af;">📦 IQR</strong> — Flags daily changes outside the typical range of changes.
         </p>
     </div>
     """, unsafe_allow_html=True)

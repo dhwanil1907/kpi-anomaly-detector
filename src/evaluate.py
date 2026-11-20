@@ -21,6 +21,19 @@ KNOWN_EVENTS = {
     "2023-03-13": "SVB bank collapse fear",
 }
 
+def _top_k(df_det, date_col, score_col, k, tiebreak_col="iforest_score"):
+    """
+    Top-K rows by score. Vote counts are small integers, so ties are common;
+    break them by the detector score (lower = more anomalous) instead of row order,
+    which would favour the earliest dates.
+    """
+    has_tiebreak = tiebreak_col in df_det.columns
+    df = df_det[[date_col, score_col] + ([tiebreak_col] if has_tiebreak else [])].copy()
+    df[date_col] = pd.to_datetime(df[date_col])
+    by = [score_col] + ([tiebreak_col] if has_tiebreak else []) + [date_col]
+    ascending = [False] + ([True] if has_tiebreak else []) + [True]
+    return df.sort_values(by, ascending=ascending).head(k).reset_index(drop=True)
+
 def precision_at_k(df_det, date_col, score_col="vote_sum", k=10, window_days=1):
     """
     Precision@K: of the top-K most anomalous days,
@@ -28,9 +41,7 @@ def precision_at_k(df_det, date_col, score_col="vote_sum", k=10, window_days=1):
     Returns (precision_float, detail_dataframe).
     """
     event_dates = pd.to_datetime(list(KNOWN_EVENTS.keys()))
-    df = df_det[[date_col, score_col]].copy()
-    df[date_col] = pd.to_datetime(df[date_col])
-    top_k = df.nlargest(k, score_col).copy().reset_index(drop=True)
+    top_k = _top_k(df_det, date_col, score_col, k)
 
     def is_near_event(d):
         return any(abs((d - e).days) <= window_days for e in event_dates)
@@ -51,13 +62,12 @@ def recall_at_k(df_det, date_col, score_col="vote_sum", k=10, window_days=1):
     what fraction did we catch in the top-K flags?
     """
     event_dates = pd.to_datetime(list(KNOWN_EVENTS.keys()))
-    df = df_det[[date_col, score_col]].copy()
-    df[date_col] = pd.to_datetime(df[date_col])
-    data_min, data_max = df[date_col].min(), df[date_col].max()
+    dates = pd.to_datetime(df_det[date_col])
+    data_min, data_max = dates.min(), dates.max()
     events_in_range = [e for e in event_dates if data_min <= e <= data_max]
     if not events_in_range:
         return 0.0
-    top_k_dates = df.nlargest(k, score_col)[date_col]
+    top_k_dates = _top_k(df_det, date_col, score_col, k)[date_col]
     caught = sum(
         any(abs((t - e).days) <= window_days for t in top_k_dates)
         for e in events_in_range
