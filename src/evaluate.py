@@ -47,10 +47,12 @@ def precision_at_k(df_det, date_col, score_col="vote_sum", k=10, window_days=1):
         return any(abs((d - e).days) <= window_days for e in event_dates)
 
     def get_label(d):
-        for k2, v in KNOWN_EVENTS.items():
-            if abs((d - pd.Timestamp(k2)).days) <= window_days:
-                return v
-        return "—"
+        # Closest event within the window, so a day is not labelled with a neighbouring event
+        gap, label = min(
+            ((abs((d - pd.Timestamp(k2)).days), v) for k2, v in KNOWN_EVENTS.items()),
+            key=lambda pair: pair[0],
+        )
+        return label if gap <= window_days else "—"
 
     top_k["is_known_event"] = top_k[date_col].apply(is_near_event)
     top_k["event_label"]    = top_k[date_col].apply(get_label)

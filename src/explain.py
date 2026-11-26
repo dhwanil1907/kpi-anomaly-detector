@@ -46,6 +46,7 @@ def explain_top_anomalies(shap_values, df_det, feature_cols, date_col="date", ta
         top3     = sorted(row_shap.items(), key=lambda x: abs(x[1]), reverse=True)[:3]
         print(f"\n  #{rank}  {date_str}  {target}={val:.2f}  votes={votes}")
         for feat, sv in top3:
-            direction = "→ anomaly" if sv > 0 else "→ normal"
+            # IsolationForest SHAP explains the anomaly score, where lower = more anomalous
+            direction = "→ anomaly" if sv < 0 else "→ normal"
             print(f"      {feat:<30s}  SHAP={sv:+.4f}  {direction}")
     print("=" * 60)

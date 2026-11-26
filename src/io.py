@@ -6,7 +6,7 @@ import pandas as pd
 
 def load_yfinance(ticker: str = "AAPL",
                   start: str = "2019-01-01",
-                  end: str = "2024-12-31") -> pd.DataFrame:
+                  end: str | None = None) -> pd.DataFrame:
     """
     Download OHLCV stock data from Yahoo Finance via yfinance.
     Returns a DataFrame with columns: date, Open, High, Low, Close, Volume.

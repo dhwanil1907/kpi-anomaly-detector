@@ -163,7 +163,7 @@ with st.sidebar:
 
     use_ocsvm = st.checkbox("🔷 One-Class SVM (slower)", value=False,
                             help="Learns a boundary around normal behaviour. Anything outside = anomaly.")
-    st.markdown('<p style="color:#6b7280;font-size:0.75rem;margin:-0.5rem 0 0.75rem 1.5rem;">Most accurate but takes longer to run.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color:#6b7280;font-size:0.75rem;margin:-0.5rem 0 0.75rem 1.5rem;">Learns a tight boundary around normal days; slower to run.</p>', unsafe_allow_html=True)
 
     st.markdown('<p style="color:#6b7280;font-size:0.75rem;margin:0.25rem 0 0.5rem 0;">📊 Statistical baselines (Z-Score & IQR) always run — no configuration needed.</p>', unsafe_allow_html=True)
 

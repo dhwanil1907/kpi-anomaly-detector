@@ -1,5 +1,6 @@
 concepts.md
-data/
+data/*
+!data/raw/
 __pycache__/
 *.pyc
 .env

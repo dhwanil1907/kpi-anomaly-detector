@@ -9,13 +9,15 @@ Unsupervised anomaly detection on AAPL daily data (2019 to present). Five detect
 | Metric | Value |
 |---|---|
 | Dataset | AAPL, 1,984 trading days, Jan 2019 to 20 Nov 2026 (1,956 after feature building) |
-| ADF p-value, raw Close | 0.9454 (non-stationary) |
+| ADF p-value, raw Close | about 0.94 (non-stationary; 0.9416 to 0.9454 depending on the pull) |
 | ADF p-value, log returns | ~0 (stationary) |
 | Consensus anomalies (2+ detectors agree) | 50 of 1,956 days (2.56%) |
 | Precision@5 | 60% (3 of 5) |
 | Precision@10 | 50% (5 of 10) |
 | Recall@10 | 33.3% (5 of 15 events) |
 | Top SHAP features | `dow` (0.399), `log_return` (0.368), `month` (0.336) |
+| Baseline: rank by \|log return\| alone | P@5 60%, P@10 40%, P@20 35% (ensemble: 60%, 50%, 35%) |
+| Across seeds 0, 1, 7, 42, 123 | P@5 60% and P@10 50% every time; P@20 30-35%; consensus 49-52 days |
 | Stability | 96% day-level agreement between first-half and second-half fits, but only 21% overlap among the days either model flagged |
 
 Ties in vote count are broken by Isolation Forest score. Matches are counted within +/- 1 day of an event date. The data is pulled live from Yahoo Finance, so these numbers come from one run (20 Nov 2026) and will drift as new days arrive. See [Limitations](#limitations) before reading much into them.
@@ -90,6 +92,7 @@ kpi-anomaly-detector/
 │   └── default.yaml            # Ticker, date range, model hyperparameters
 │
 ├── data/
+│   ├── raw/aapl_snapshot.csv   # frozen AAPL OHLCV (committed)
 │   └── processed/              # clean_data.csv, anomalies.csv (git-ignored)
 │
 ├── requirements.txt
@@ -175,11 +178,15 @@ SHAP values from the Isolation Forest attribute each flag to features. `explain_
 
 ## Limitations
 
+- **Modest gain over a naive baseline.** Ranking days by absolute log return alone matches the ensemble at K=5 and K=20 and trails it by one hit at K=10 (40% vs 50%). With 15 events, that one hit is within noise. Treat the ensemble as a reasonable ranking, not a proven improvement.
+- **Results depend on the data pull.** Yahoo adjusts historical prices, so a fresh pull of the same dates gave One-Class SVM 44 flags, consensus 49, P@5 40%, P@10 30% and R@10 26.7%. The numbers above are for the saved `clean_data.csv`. `configs/default.yaml` fixes the end date, but the prices themselves can still shift.
+- **`KNOWN_EVENTS` stops at 2024.** It has no 2025 or 2026 events. They were left out on purpose: adding events after seeing the flags would be tuning on the test set. Flags in those years go unscored.
+
 - **Hand-picked ground truth.** `KNOWN_EVENTS` has 15 dates, and 6 of them are in March 2020. A model that only catches the COVID crash scores well on precision.
 - **Small sample.** Recall@10 of 33% is 5 events out of 15, so one more or fewer hit moves it a lot.
 - **Close-to-event matching.** A flag counts if it falls within a day of an event, which makes matches easier than an exact-date test.
 - **SHAP covers one model.** The explanations are for the Isolation Forest only, not for the consensus vote.
-- **Statistical baselines are crude.** Z-score and IQR look at one series (daily % change), so they flag only large single-day moves. IQR flags 97 days and z-score 29, against about 40 for each ML model.
+- **Statistical baselines are crude.** Z-score and IQR look at one series (daily % change), so they flag only large single-day moves. IQR flags 97 days and z-score 29, against 40 each for Isolation Forest and LOF and 51 for One-Class SVM.
 - **Unstable across periods.** Fitting on different halves of the history gives mostly different flagged days (see Stability above).
 - **Calendar features lead the SHAP ranking.** `dow` and `month` rank first and third, which suggests they add noise rather than signal for the Isolation Forest.
 - **Fixed contamination.** The ML detectors assume about 2% of days are anomalous, so the count of flags is partly set by that choice.
