@@ -195,21 +195,22 @@ def coerce_datetime(df: pd.DataFrame):
                 return cand
     return None
 
+SNAPSHOT_PATH = Path(__file__).resolve().parent / "data" / "raw" / "aapl_snapshot.csv"
+
 df_input     = None
 source_label = ""
+using_sample = False
 
 if mode == "Use processed files":
     processed_dir = find_default_processed()
-    if processed_dir is None:
-        st.warning("⚠️ No processed data found. Run the notebook first, or switch to Upload CSV.")
-        st.stop()
-    fp       = processed_dir / "clean_data.csv"
-    df_input = pd.read_csv(fp)
-    # Keep only the raw columns; features are rebuilt below, and the engineered
-    # columns saved by the notebook would otherwise show up as selectable KPIs.
-    raw_cols = [c for c in ["date", "Open", "High", "Low", "Close", "Volume"] if c in df_input.columns]
-    df_input = df_input[raw_cols]
-    source_label = fp.name
+    if processed_dir is not None:
+        fp       = processed_dir / "clean_data.csv"
+        df_input = pd.read_csv(fp)
+        # Keep only the raw columns; features are rebuilt below, and the engineered
+        # columns saved by the notebook would otherwise show up as selectable KPIs.
+        raw_cols = [c for c in ["date", "Open", "High", "Low", "Close", "Volume"] if c in df_input.columns]
+        df_input = df_input[raw_cols]
+        source_label = fp.name
 else:
     up = st.file_uploader(
         "Upload a CSV — needs a **date** column and at least one **number** column (e.g. price, sales, traffic)",
@@ -222,17 +223,15 @@ else:
         except Exception as e:
             st.error(f"Failed to read CSV: {e}")
 
+# No data supplied: fall back to the committed snapshot so the app works offline
 if df_input is None:
-    st.markdown("""
-    <div style="text-align:center; padding:5rem 0; color:#374151;">
-        <div style="font-size:3.5rem; margin-bottom:1rem;">📂</div>
-        <p style="font-size:1.05rem; font-weight:600; color:#6b7280;">No data loaded yet</p>
-        <p style="font-size:0.85rem; color:#4b5563;">
-            Run the notebook first to generate processed files,<br>or switch to <strong>Upload CSV</strong> in the sidebar.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.stop()
+    df_input     = pd.read_csv(SNAPSHOT_PATH)
+    source_label = SNAPSHOT_PATH.name
+    using_sample = True
+
+if using_sample:
+    st.info("Showing frozen sample data (AAPL, to 2026-11-20). "
+            "Switch to Upload CSV in the sidebar to analyse your own data.")
 
 # ---------------------------------------------------------
 # Date + KPI selection

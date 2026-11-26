@@ -24,6 +24,25 @@ Ties in vote count are broken by Isolation Forest score. Matches are counted wit
 
 ---
 
+## Quick Start
+
+```bash
+git clone https://github.com/dhwanil1907/kpi-anomaly-detector
+cd kpi-anomaly-detector
+python -m venv venv
+source venv/bin/activate        # macOS/Linux; on Windows: venv\Scripts\activate
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+The dashboard opens on frozen sample AAPL data (`data/raw/aapl_snapshot.csv`), so no upload or network access is needed.
+
+To run the notebook instead, use `jupyter notebook notebook/kpi.ipynb`. It pulls fresh data from yfinance, so its numbers will differ from the Results table.
+
+![Dashboard on the sample AAPL data](docs/dashboard.png)
+
+---
+
 ## Detection Models
 
 | Model | Type | Notes |
@@ -58,7 +77,7 @@ The ML detectors see only these six stationary features (`feature_columns` in `s
 - SHAP scatter plot: feature value vs SHAP contribution across all days
 
 ### Streamlit Dashboard
-- Reads `data/processed/clean_data.csv` (run the notebook first) or an uploaded CSV; it does not fetch from Yahoo Finance itself
+- Opens on the frozen sample data in `data/raw/aapl_snapshot.csv`; an uploaded CSV can be used instead. It does not fetch from Yahoo Finance itself
 - Select any numeric KPI column to analyse
 - Severity labels (High / Medium / Low) based on how many detectors agree
 - Summary card with the anomaly count and the most anomalous day
@@ -118,7 +137,7 @@ pip install -r requirements.txt
 
 ## Running the Dashboard
 
-Run the notebook first so `data/processed/clean_data.csv` exists (`data/` is git-ignored), or switch to **Upload CSV** in the sidebar. Run from the repo root:
+No notebook run is needed: the dashboard starts on the committed snapshot `data/raw/aapl_snapshot.csv`. Run from the repo root:
 
 ```bash
 streamlit run app.py
