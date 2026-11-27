@@ -20,7 +20,7 @@ Unsupervised anomaly detection on AAPL daily data (2019 to present). Five detect
 | Across seeds 0, 1, 7, 42, 123 | P@5 60% and P@10 50% every time; P@20 30-35%; consensus 49-52 days |
 | Stability | 96% day-level agreement between first-half and second-half fits, but only 21% overlap among the days either model flagged |
 
-Ties in vote count are broken by Isolation Forest score. Matches are counted within +/- 1 day of an event date. The data is pulled live from Yahoo Finance, so these numbers come from one run (20 Nov 2026) and will drift as new days arrive. See [Limitations](#limitations) before reading much into them.
+Ties in vote count are broken by Isolation Forest score. Matches are counted within +/- 1 day of an event date. These numbers come from one saved run on data through 20 Nov 2026. A fresh Yahoo Finance pull of the same dates gives different values (see [Limitations](#limitations)), so read them with that in mind.
 
 ---
 
@@ -35,9 +35,9 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-The dashboard opens on frozen sample AAPL data (`data/raw/aapl_snapshot.csv`), so no upload or network access is needed.
+On a fresh clone the dashboard opens on frozen sample AAPL data (`data/raw/aapl_snapshot.csv`), so no upload or network access is needed.
 
-To run the notebook instead, use `jupyter notebook notebook/kpi.ipynb`. It pulls fresh data from yfinance, so its numbers will differ from the Results table.
+To run the notebook instead, use `jupyter notebook notebook/kpi.ipynb`. It downloads the date range in `configs/default.yaml` from yfinance. Yahoo can adjust past prices, so its numbers may differ from the Results table.
 
 ![Dashboard on the sample AAPL data](docs/dashboard.png)
 
@@ -111,27 +111,15 @@ kpi-anomaly-detector/
 ├── configs/
 │   └── default.yaml            # Ticker, date range, model hyperparameters
 │
+├── docs/
+│   └── dashboard.png           # Dashboard screenshot
+│
 ├── data/
 │   ├── raw/aapl_snapshot.csv   # frozen AAPL OHLCV (committed)
 │   └── processed/              # clean_data.csv, anomalies.csv (git-ignored)
 │
 ├── requirements.txt
 └── README.md
-```
-
----
-
-## Installation
-
-```bash
-git clone https://github.com/dhwanil1907/kpi-anomaly-detector
-cd kpi-anomaly-detector
-
-python -m venv venv
-source venv/bin/activate        # macOS/Linux
-# venv\Scripts\activate         # Windows
-
-pip install -r requirements.txt
 ```
 
 ---
@@ -157,7 +145,7 @@ jupyter notebook kpi.ipynb
 
 Run cells top to bottom. The notebook covers:
 1. Environment setup + config
-2. Data load from Yahoo Finance (AAPL, 2019–today)
+2. Data load from Yahoo Finance (AAPL, 2019-01-01 to the end date in the config)
 3. ADF stationarity test + log return transformation
 4. Feature engineering
 5. Anomaly detection (5 models)
@@ -192,7 +180,7 @@ SHAP values from the Isolation Forest attribute each flag to features. `explain_
 
 ## Configuration
 
-`configs/default.yaml` holds the ticker, start date and Isolation Forest settings, and `src.config.load_config()` reads it. The Streamlit app does not load it yet, so the dashboard uses its own sidebar controls.
+`configs/default.yaml` holds the ticker, start and end dates and Isolation Forest settings, and `src.config.load_config()` reads it. The Streamlit app does not load it yet, so the dashboard uses its own sidebar controls.
 
 ---
 
@@ -202,7 +190,6 @@ SHAP values from the Isolation Forest attribute each flag to features. `explain_
 - **Results depend on the data pull.** Yahoo adjusts historical prices, so a fresh pull of the same dates gave One-Class SVM 44 flags, consensus 49, P@5 40%, P@10 30% and R@10 26.7%. The numbers above are for the saved `clean_data.csv`. `configs/default.yaml` fixes the end date, but the prices themselves can still shift.
 - **Flagged but unscored days.** The top 10 also includes 2025-04-04 and 2025-04-09, and 2020-07-31, 2020-03-24 and 2020-03-20. None is in `KNOWN_EVENTS`, so they count as misses even if they were real moves.
 - **`KNOWN_EVENTS` stops at 2024.** It has no 2025 or 2026 events. They were left out on purpose: adding events after seeing the flags would be tuning on the test set. Flags in those years go unscored.
-
 - **Hand-picked ground truth.** `KNOWN_EVENTS` has 15 dates, and 6 of them are in March 2020. A model that only catches the COVID crash scores well on precision.
 - **Small sample.** Recall@10 of 33% is 5 events out of 15, so one more or fewer hit moves it a lot.
 - **Close-to-event matching.** A flag counts if it falls within a day of an event, which makes matches easier than an exact-date test.
