@@ -250,7 +250,8 @@ if not numeric_cols:
 
 kpi_col, info_col = st.columns([1, 3])
 with kpi_col:
-    kpi = st.selectbox("📊 Choose a metric to analyse", numeric_cols, index=0)
+    default_idx = numeric_cols.index("Close") if "Close" in numeric_cols else 0
+    kpi = st.selectbox("📊 Choose a metric to analyse", numeric_cols, index=default_idx)
 with info_col:
     date_min = df_input[date_col].min()
     date_max = df_input[date_col].max()

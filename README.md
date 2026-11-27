@@ -79,6 +79,7 @@ The ML detectors see only these six stationary features (`feature_columns` in `s
 ### Streamlit Dashboard
 - Opens on the frozen sample data in `data/raw/aapl_snapshot.csv`; an uploaded CSV can be used instead. It does not fetch from Yahoo Finance itself
 - Select any numeric KPI column to analyse
+- Defaults differ from the Results table: One-Class SVM is off, so 4 detectors vote, and features are rebuilt from the raw columns. On Close at default settings it flags 42 of 1,928 days; turn One-Class SVM on to compare with the 5-detector numbers above
 - Severity labels (High / Medium / Low) based on how many detectors agree
 - Summary card with the anomaly count and the most anomalous day
 - Annotated time-series chart with hover tooltips
@@ -199,6 +200,7 @@ SHAP values from the Isolation Forest attribute each flag to features. `explain_
 
 - **Modest gain over a naive baseline.** Ranking days by absolute log return alone matches the ensemble at K=5 and K=20 and trails it by one hit at K=10 (40% vs 50%). With 15 events, that one hit is within noise. Treat the ensemble as a reasonable ranking, not a proven improvement.
 - **Results depend on the data pull.** Yahoo adjusts historical prices, so a fresh pull of the same dates gave One-Class SVM 44 flags, consensus 49, P@5 40%, P@10 30% and R@10 26.7%. The numbers above are for the saved `clean_data.csv`. `configs/default.yaml` fixes the end date, but the prices themselves can still shift.
+- **Flagged but unscored days.** The top 10 also includes 2025-04-04 and 2025-04-09, and 2020-07-31, 2020-03-24 and 2020-03-20. None is in `KNOWN_EVENTS`, so they count as misses even if they were real moves.
 - **`KNOWN_EVENTS` stops at 2024.** It has no 2025 or 2026 events. They were left out on purpose: adding events after seeing the flags would be tuning on the test set. Flags in those years go unscored.
 
 - **Hand-picked ground truth.** `KNOWN_EVENTS` has 15 dates, and 6 of them are in March 2020. A model that only catches the COVID crash scores well on precision.

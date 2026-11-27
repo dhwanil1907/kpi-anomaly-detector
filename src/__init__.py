@@ -1,6 +1,4 @@
-# kpi_anomaly package initializer
-
-# Exports all key modules for convenient importing
+# src package initializer: re-exports the loaders, features, detectors, evaluation and plots
 
 from .config import load_config
 from .io import find_data_dir, load_processed, read_csv_auto, load_yfinance
